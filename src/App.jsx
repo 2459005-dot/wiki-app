@@ -1,28 +1,66 @@
 import './App.css'
-import { Routes, Route } from 'react-router-dom'
-import About from './pages/About'
-import Board from './pages/Board'
-import Nav from './components/Nav'
-import Notfound from './pages/Notfound'
-import Home from './pages/Home'
-import BoardDetail from './pages/BoardDetail'
-import Community from './pages/Community'
-import CommunityDetail from './pages/CommunityDetail'
+import WeatherCard from './components/WeatherCard'
+import { useState, useRef, useEffect } from 'react'
+import { fetchCoordinates } from './api/geo'
+import { fetchWeatherByCoords } from './api/weather'
 
 function App() {
 
+  const [city, setCity] = useState('seoul')
+  const [weather, setWeather] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState('')
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    inputRef.current.focus()
+  }, [])
+
+  const handleSearch = async () => {
+    const q = city.trim()
+    if (!q) return
+
+    try {
+      setLoading(true)
+      setErr('')
+
+      const { lat, lon, name, country } = await fetchCoordinates(q)
+      const data = await fetchWeatherByCoords(lat, lon)
+
+      setWeather(data)
+      setCity('')
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onChangeInput = (e) => setCity(e.target.value)
+  const onKeyup = (e) => {
+    if (e.key === 'Enter') handleSearch()
+  }
+
   return (
-    <div>
-      <Nav />
-      <Routes>
-        <Route path='/' element={<Home />} />
-        <Route path='/about' element={<About />} />
-        <Route path='/board' element={<Board />} />
-        <Route path='/board/:id' element={<BoardDetail />} />
-        <Route path='*' element={<Notfound />} />
-        <Route path='/community' element={<Community/>} />
-        <Route path='/community/:id' element={<CommunityDetail/>} />
-      </Routes>
+    <div className='app'>
+      <h1>김한빈의 날씨 앱</h1>
+      <div className="input-wrap">
+        <input
+          ref={inputRef}
+          value={city}
+          onChange={onChangeInput}
+          onKeyUp={onKeyup}
+          type="text"
+          placeholder='도시 이름 입력' />
+        <button
+          onClick={handleSearch}
+          disabled={loading}>
+          {loading ? "검색중...." : "검색"}
+        </button>
+      </div>
+      {err && <p className='error'>{err}</p>}
+      {loading && <p className='info'>불러오는중....</p>}
+      <WeatherCard weather={weather} />
     </div>
   )
 }
